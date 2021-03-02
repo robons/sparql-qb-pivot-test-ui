@@ -1,0 +1,123 @@
+PREFIX owl: <http://www.w3.org/2002/07/owl#>
+PREFIX void: <http://rdfs.org/ns/void#>
+PREFIX pmdkos: <http://publishmydata.com/def/pmdkos/>
+PREFIX dcterms: <http://purl.org/dc/terms/>
+PREFIX rdf: <http://www.w3.org/1999/02/22-rdf-syntax-ns#>
+PREFIX dcat: <http://www.w3.org/ns/dcat#>
+PREFIX dct: <http://purl.org/dc/terms/>
+PREFIX pmdui: <http://publishmydata.com/def/pmdui/>
+PREFIX rdfs: <http://www.w3.org/2000/01/rdf-schema#>
+PREFIX markdown: <https://www.w3.org/ns/iana/media-types/text/markdown#>
+PREFIX qb: <http://purl.org/linked-data/cube#>
+PREFIX skos: <http://www.w3.org/2004/02/skos/core#>
+PREFIX xsd: <http://www.w3.org/2001/XMLSchema#>
+PREFIX measure: <http://gss-data.org.uk/def/measure/>
+PREFIX sdmx: <http://purl.org/linked-data/sdmx/2009/attribute#>
+PREFIX measureUnit: <http://gss-data.org.uk/def/concept/measurement-units/>
+PREFIX pmdcat: <http://publishmydata.com/pmdcat#>
+PREFIX prov: <http://www.w3.org/ns/prov#>
+PREFIX thisDim: <http://gss-data.org.uk/data/gss_data/trade/ons-quarterly-country-and-regional-gdp#dimension/>
+PREFIX tradeMeas: <http://gss-data.org.uk/def/trade/measure/>
+PREFIX tradeDim: <http://gss-data.org.uk/def/trade/property/dimension/>
+
+SELECT *
+WHERE {
+    # VALUES (?dimension) {
+    #     (thisDim:period)
+    #     (thisDim:reference-area)
+    #     (tradeDim:industry-section)
+    #     (qb:measureType)
+    # }
+
+    # VALUES (?attribute) {
+    #     (sdmx:unitMeasure)
+    # }
+
+    # VALUES (?measure) {
+    #     (tradeMeas:q-on-q-delta-gdp-from-gva)
+    #     (tradeMeas:q-on-last-year-q-delta-gdp-from-gva)
+    #     (tradeMeas:y-on-y-delta-gdp-from-gva)
+    #     (tradeMeas:gdp-from-gva)
+    # }
+
+    {
+        SELECT *
+        WHERE {
+            {
+                SELECT 
+                    ?thisDimperiod 
+                    ?thisDimreferencearea 
+                    ?tradeDimindustrysection
+                WHERE {
+                    GRAPH <http://gss-data.org.uk/graph/gss_data/trade/ons-quarterly-country-and-regional-gdp> {
+                        ?dataSet a qb:DataSet.
+
+                        []
+                            a qb:Observation;
+                            qb:dataSet ?dataSet;
+                            thisDim:period ?thisDimperiod;
+                            thisDim:reference-area ?thisDimreferencearea;
+                            tradeDim:industry-section ?tradeDimindustrysection.
+                    }
+                }
+                GROUP BY 
+                    ?thisDimperiod 
+                    ?thisDimreferencearea 
+                    ?tradeDimindustrysection
+                LIMIT 100
+                # TODO: this is where we do paging
+            }
+
+            GRAPH <http://gss-data.org.uk/graph/gss_data/trade/ons-quarterly-country-and-regional-gdp> {
+                ?obstradeMeasqonqdeltagdpfromgva
+                    thisDim:period ?thisDimperiod;
+                    thisDim:reference-area ?thisDimreferencearea;
+                    tradeDim:industry-section ?tradeDimindustrysection;
+                    qb:measureType tradeMeas:q-on-q-delta-gdp-from-gva.
+
+                # {
+                #     # This is where we'd check for an obs-status value.
+                #     # ?obstradeMeasqonqdeltagdpfromgva
+                # } UNION {
+                    ?obstradeMeasqonqdeltagdpfromgva 
+                        tradeMeas:q-on-q-delta-gdp-from-gva ?valuetradeMeasqonqdeltagdpfromgva;
+                        sdmx:unitMeasure ?unittradeMeasqonqdeltagdpfromgva.
+                # }
+
+                ?obstradeMeasqonlastyearqdeltagdpfromgva
+                    thisDim:period ?thisDimperiod;
+                    thisDim:reference-area ?thisDimreferencearea;
+                    tradeDim:industry-section ?tradeDimindustrysection;
+                    qb:measureType tradeMeas:q-on-last-year-q-delta-gdp-from-gva.
+
+                ?obstradeMeasqonlastyearqdeltagdpfromgva 
+                    tradeMeas:q-on-last-year-q-delta-gdp-from-gva ?valuetradeMeasqonlastyearqdeltagdpfromgva;
+                    sdmx:unitMeasure ?unittradeMeasqonlastyearqdeltagdpfromgva.
+
+                ?obstradeMeasgdpfromgva
+                    thisDim:period ?thisDimperiod;
+                    thisDim:reference-area ?thisDimreferencearea;
+                    tradeDim:industry-section ?tradeDimindustrysection;
+                    qb:measureType tradeMeas:gdp-from-gva.
+
+                ?obstradeMeasgdpfromgva 
+                    tradeMeas:gdp-from-gva ?valuetradeMeasgdpfromgva;
+                    sdmx:unitMeasure ?unittradeMeasgdpfromgva.
+
+                # ?obstradeMeasyonydeltagdpfromgva
+                #     thisDim:period ?thisDimperiod;
+                #     thisDim:reference-area ?thisDimreferencearea;
+                #     tradeDim:industry-section ?tradeDimindustrysection;
+                #     qb:measureType tradeMeas:y-on-y-delta-gdp-from-gva.
+                # ?obstradeMeasyonydeltagdpfromgva tradeMeas:y-on-y-delta-gdp-from-gva ?valuetradeMeasyonydeltagdpfromgva.
+            }
+        }
+    }
+
+    {
+        # ?unittradeMeasqonqdeltagdpfromgva rdfs:label ?unitlabeltradeMeasqonqdeltagdpfromgva.
+        # ?unittradeMeasqonlastyearqdeltagdpfromgva rdfs:label ?unitlabeltradeMeasqonlastyearqdeltagdpfromgva.
+        # ?unittradeMeasgdpfromgva rdfs:label ?unitlabeltradeMeasgdpfromgva.        
+    }
+}
+LIMIT 1000

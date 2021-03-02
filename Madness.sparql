@@ -1,0 +1,67 @@
+PREFIX qb: <http://purl.org/linked-data/cube#>
+PREFIX rdfs: <http://www.w3.org/2000/01/rdf-schema#>
+
+SELECT DISTINCT ?dimension ?attribute ?measure ?labelGraphUri
+WHERE {
+    BIND (<http://gss-data.org.uk/data/gss_data/energy/beis-sub-regional-feed-in-tariffs-confirmed-on-the-cfr-statistics#dataset> as ?dataSet).
+    GRAPH ?dataSetGraph {
+        ?dataSet a qb:DataSet.
+    } 
+        
+    {
+        # Get info on all of the dimensions in this dataset and find out which graphs the URIs are located in (to optimise later queries).
+        SELECT DISTINCT ?dimension ?labelGraphUri
+        WHERE {
+            {
+                SELECT DISTINCT ?dimension ?dimensionValue
+                WHERE {
+                    GRAPH ?dataSetGraph {
+                        BIND(<http://gss-data.org.uk/data/gss_data/energy/beis-sub-regional-feed-in-tariffs-confirmed-on-the-cfr-statistics#dataset> as ?dataSet)
+
+                        ?dataSet 
+                            a qb:DataSet;
+                            qb:structure/qb:component/qb:dimension ?dimension.
+
+                        ?obs
+                            a qb:Observation; 
+                            qb:dataSet ?dataSet;
+                            ?dimension ?dimensionValue.
+                    }
+                }
+            }
+
+            GRAPH ?labelGraphUri {
+                ?dimensionValue rdfs:label ?label.
+            }
+        }
+    } UNION {
+        SELECT DISTINCT ?attribute ?labelGraphUri
+        WHERE {
+            {
+                SELECT DISTINCT ?attribute ?attributeValue
+                WHERE {
+                    GRAPH ?dataSetGraph {
+                        BIND(<http://gss-data.org.uk/data/gss_data/energy/beis-sub-regional-feed-in-tariffs-confirmed-on-the-cfr-statistics#dataset> as ?dataSet)
+
+                        ?dataSet 
+                            a qb:DataSet;
+                            qb:structure/qb:component/qb:attribute ?attribute.
+
+                        ?obs
+                            a qb:Observation; 
+                            qb:dataSet ?dataSet;
+                            ?attribute ?attributeValue.
+                    }
+                }
+            }
+
+            GRAPH ?labelGraphUri {
+                ?attributeValue rdfs:label ?label.
+            }
+        }
+    } UNION {
+        GRAPH ?dataSetGraph {
+            ?dataSet qb:structure/qb:component/qb:measure ?measure.
+        }
+    }       
+}
