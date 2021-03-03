@@ -8,8 +8,12 @@ let currentEndPointComponents: Component[]
 let currentPage: number
 
 const sparqlEndPointUri = "https://staging.gss-data.org.uk/sparql"
-const dataSetUri = "http://gss-data.org.uk/data/gss_data/energy/beis-sub-regional-feed-in-tariffs-confirmed-on-the-cfr-statistics#dataset"
+const dataSetUri = "http://gss-data.org.uk/data/gss_data/edvp/lccc-actual-ilr-income#dataset" // Fewest Dimensions => Fastest
+// const dataSetUri = "http://gss-data.org.uk/data/gss_data/energy/beis-sub-regional-feed-in-tariffs-confirmed-on-the-cfr-statistics#dataset"
 // const dataSetUri = "http://gss-data.org.uk/data/gss_data/trade/ons-quarterly-country-and-regional-gdp#dataset"
+// const dataSetUri = "http://gss-data.org.uk/data/gss_data/edvp/dft-electric-vehicle-charging-device-statistics-month-year-data-tables#dataset"
+// const dataSetUri = "http://gss-data.org.uk/data/gss_data/trade/hmrc-regional-trade-statistics-interactive-analysis#dataset"
+
 
 const main = async () => {
     currentPage = 1

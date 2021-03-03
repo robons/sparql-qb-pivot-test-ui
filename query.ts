@@ -55,78 +55,90 @@ export class ObservedValue<T = any> extends ComponentValue<T> {
 export const getDataStructureDefinition = async (dataSetUri: string, endPointUri: string): Promise<Component[]> => {
     // Need to get the dimensions, attributes and measures used in this dataset.
     // Is also helpful to find out which graphs the labels for these items live.
-    const sparqlQuery = `
+    const dimensionsQuery = `
         PREFIX qb: <http://purl.org/linked-data/cube#>
         PREFIX rdfs: <http://www.w3.org/2000/01/rdf-schema#>
 
-        SELECT DISTINCT ?dimension ?attribute ?measure ?labelGraphUri
-        WHERE {               
+        # Get info on all of the dimensions in this dataset and find out which graphs the URIs are located in (to optimise later queries).
+        SELECT DISTINCT ?dimension ?labelGraphUri
+        WHERE {
             {
-                # Get info on all of the dimensions in this dataset and find out which graphs the URIs are located in (to optimise later queries).
-                SELECT DISTINCT ?dimension ?labelGraphUri
+                SELECT DISTINCT ?dimension ?dimensionValue
                 WHERE {
-                    {
-                        SELECT DISTINCT ?dimension ?dimensionValue
-                        WHERE {
-                            GRAPH ?dataSetGraph {
-                                BIND(<${dataSetUri}> as ?dataSet)
+                    GRAPH ?dataSetGraph {
+                        BIND(<${dataSetUri}> as ?dataSet)
 
-                                ?dataSet 
-                                    a qb:DataSet;
-                                    qb:structure/qb:component/qb:dimension ?dimension.
+                        ?dataSet 
+                            a qb:DataSet;
+                            qb:structure/qb:component/qb:dimension ?dimension.
 
-                                ?obs
-                                    a qb:Observation; 
-                                    qb:dataSet ?dataSet;
-                                    ?dimension ?dimensionValue.
-                            }
-                        }
-                    }
-
-                    OPTIONAL {
-                        GRAPH ?labelGraphUri {
-                            ?dimensionValue rdfs:label ?label.
-                        }
+                        ?obs
+                            a qb:Observation; 
+                            qb:dataSet ?dataSet;
+                            ?dimension ?dimensionValue.
                     }
                 }
-            } UNION {
-                SELECT DISTINCT ?attribute ?labelGraphUri
-                WHERE {
-                    {
-                        SELECT DISTINCT ?attribute ?attributeValue
-                        WHERE {
-                            GRAPH ?dataSetGraph {
-                                BIND(<${dataSetUri}> as ?dataSet)
+            }
 
-                                ?dataSet 
-                                    a qb:DataSet;
-                                    qb:structure/qb:component/qb:attribute ?attribute.
-
-                                ?obs
-                                    a qb:Observation; 
-                                    qb:dataSet ?dataSet;
-                                    ?attribute ?attributeValue.
-                            }
-                        }
-                    }
-
-                    GRAPH ?labelGraphUri {
-                        ?attributeValue rdfs:label ?label.
-                    }
+            OPTIONAL {
+                GRAPH ?labelGraphUri {
+                    ?dimensionValue rdfs:label ?label.
                 }
-            } UNION {
-                GRAPH ?dataSetGraph {
-                    BIND (<${dataSetUri}> as ?dataSet).
-                    ?dataSet a qb:DataSet.
-        
-                    ?dataSet qb:structure/qb:component/qb:measure ?measure.
-                }
-                # Measure values are literals and should never be URIS.
-            }       
+            }
         }
     `
 
-    const results = await query<any>(endPointUri, sparqlQuery);
+    const attributesQuery = `
+        PREFIX qb: <http://purl.org/linked-data/cube#>
+        PREFIX rdfs: <http://www.w3.org/2000/01/rdf-schema#>
+
+        SELECT DISTINCT ?attribute ?labelGraphUri
+        WHERE {
+            {
+                SELECT DISTINCT ?attribute ?attributeValue
+                WHERE {
+                    GRAPH ?dataSetGraph {
+                        BIND(<${dataSetUri}> as ?dataSet)
+
+                        ?dataSet 
+                            a qb:DataSet;
+                            qb:structure/qb:component/qb:attribute ?attribute.
+
+                        ?obs
+                            a qb:Observation; 
+                            qb:dataSet ?dataSet;
+                            ?attribute ?attributeValue.
+                    }
+                }
+            }
+
+            GRAPH ?labelGraphUri {
+                ?attributeValue rdfs:label ?label.
+            }
+        }
+    `
+
+    const measuresQuery = `
+        PREFIX qb: <http://purl.org/linked-data/cube#>
+
+        SELECT ?measure 
+        WHERE {
+            GRAPH ?dataSetGraph {
+                BIND (<${dataSetUri}> as ?dataSet).
+                ?dataSet a qb:DataSet.
+
+                ?dataSet qb:structure/qb:component/qb:measure ?measure.
+            }
+            # Measure values are literals and should never be URIS.
+        }
+    `
+
+    // Running queries in parallel is a *lot* faster than running a single query unioning these together.
+    const allResults = await Promise.all(
+        [dimensionsQuery, attributesQuery, measuresQuery]
+            .map(sparqlQuery => query<any>(endPointUri, sparqlQuery))
+    )
+    const results = allResults.flatMap(r => r);
 
     const mapDimensionToValueGraphUris: {[dimensionUri: string]: string[]} = {}
     const mapAttributeToValueGraphUris: {[attributeUri: string]: string[]} = {}
@@ -141,8 +153,9 @@ export const getDataStructureDefinition = async (dataSetUri: string, endPointUri
                 uniqueComponents.push(new Dimension(dimensionUri, valueGraphUris))
                 mapDimensionToValueGraphUris[dimensionUri] = valueGraphUris
             }
-
-            mapDimensionToValueGraphUris[dimensionUri].push(valueGraphUri)
+            if (typeof valueGraphUri !== "undefined" && valueGraphUri !== null) {
+                mapDimensionToValueGraphUris[dimensionUri].push(valueGraphUri)
+            }
         } else if ("attribute" in component) {
             const attributeUri = component["attribute"];
             const valueGraphUri = component["labelGraphUri"]
@@ -152,8 +165,9 @@ export const getDataStructureDefinition = async (dataSetUri: string, endPointUri
                 mapAttributeToValueGraphUris[attributeUri] = valueGraphUris
             }
 
-            mapAttributeToValueGraphUris[attributeUri].push(valueGraphUri)
-
+            if (typeof valueGraphUri !== "undefined" && valueGraphUri !== null) {
+                mapAttributeToValueGraphUris[attributeUri].push(valueGraphUri)
+            }
         } else if ("measure" in component) {
             uniqueComponents.push(new Measure(component["measure"]))
         } else {
