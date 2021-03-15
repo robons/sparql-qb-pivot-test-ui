@@ -215,28 +215,43 @@ export const getData = async (
                 {
                     SELECT ${nonQbMeasureDimensionVariableAliases.join(' ')}
                     WHERE {
-                        BIND(<${dataSetUri}> as ?dataSet).
-                        ?dataSet a qb:DataSet.
+                        GRAPH ?dataSetGraph {
+                            BIND(<${dataSetUri}> as ?dataSet).
+                            ?dataSet a qb:DataSet.
+                        }
                         
-                        []
-                            a qb:Observation;
-                            qb:dataSet ?dataSet;
-                            ${nonQbMeasureDimensionUrisWithVariables}.
+                        {
+                            SELECT *
+                            WHERE {
+                                []
+                                    a qb:Observation;
+                                    qb:dataSet ?dataSet;
+                                    ${nonQbMeasureDimensionUrisWithVariables}.
+                            }
+                        }
 
                         # Find the label for each dimension value by searching the graphs we know labels are found in.
-                        # todo: Might want to put the below into a SELECT LIMIT 1 sub query to deal with possible duplicate labels better.
                         ${
                             dimensionsNotQbMeasure
                                 .map(d => 
-                                    d.valueGraphUris
-                                        .map(graphUri => `
-                                        {
-                                            GRAPH <${graphUri}> {
-                                                ?${d.getValueVariableAlias()} rdfs:label ?${d.getValueLabelVariableAlias()}.
+                                    `{ 
+                                        # Account for possible duplicate lables.
+                                        #SELECT ?${d.getValueVariableAlias()} (GROUP_CONCAT(?${d.getValueLabelVariableAlias()}x; separator=",") as ?${d.getValueLabelVariableAlias()})
+                                        SELECT ?${d.getValueVariableAlias()} (MIN(?${d.getValueLabelVariableAlias()}inner) as ?${d.getValueLabelVariableAlias()})
+                                        WHERE {
+                                            ${d.valueGraphUris
+                                                .map(graphUri => `
+                                                {
+                                                    GRAPH <${graphUri}> {
+                                                        ?${d.getValueVariableAlias()} rdfs:label ?${d.getValueLabelVariableAlias()}inner.
+                                                    }
+                                                }
+                                                `)
+                                                .join(" UNION\n")    
                                             }
                                         }
-                                        `)
-                                        .join(" UNION\n")    
+                                        GROUP BY ?${d.getValueVariableAlias()}
+                                    }`
                                 )
                                 .join("\n")
                         }
