@@ -3,35 +3,40 @@ import { DimensionValue, getData, getDataStructureDefinition, ObservedValue, Com
 const tableContainer = window.document.getElementById("tableContainer");
 const nextButton = window.document.getElementById("nextButton");
 const currentPageNumberSpan = window.document.getElementById("pageNumberDisplay");
+const dataSetSelection = <HTMLFormElement>window.document.getElementById("dataSet");
 
 let currentEndPointComponents: Component[]
 let currentPage: number
 
 const sparqlEndPointUri = "https://staging.gss-data.org.uk/sparql"
-const dataSetUri = "http://gss-data.org.uk/data/gss_data/edvp/lccc-actual-ilr-income#dataset" // Fewest Dimensions => Fastest
-// const dataSetUri = "http://gss-data.org.uk/data/gss_data/energy/beis-sub-regional-feed-in-tariffs-confirmed-on-the-cfr-statistics#dataset"
-// const dataSetUri = "http://gss-data.org.uk/data/gss_data/trade/ons-quarterly-country-and-regional-gdp#dataset"
-// const dataSetUri = "http://gss-data.org.uk/data/gss_data/edvp/dft-electric-vehicle-charging-device-statistics-month-year-data-tables#dataset"
-// const dataSetUri = "http://gss-data.org.uk/data/gss_data/trade/hmrc-regional-trade-statistics-interactive-analysis#dataset"
 
+const main = async () => {  
+    dataSetSelection.onchange = (event: Event) => {
+        setDataSet(sparqlEndPointUri, dataSetSelection.value)
+        .then(() => console.log(`Set dataset URI to ${dataSetSelection.value}`))
+        .catch(console.error)
+    }
 
-const main = async () => {
+    await setDataSet(sparqlEndPointUri, dataSetSelection.value)
+}
+
+const setDataSet = async (sparqlEndPoint: string, dataSetUri: string) => {
     currentPage = 1
     currentEndPointComponents = await getDataStructureDefinition(
         dataSetUri,
-        sparqlEndPointUri
+        sparqlEndPoint
     )
     
     console.log(currentEndPointComponents)
 
-   
-    nextButton.onclick = () => nextPageClick()
-    await renderPageResults(currentPage)
+    nextButton.onclick = () => nextPageClick(sparqlEndPoint, dataSetUri)
+
+    await renderPageResults(sparqlEndPoint, dataSetUri, currentPage)
 }
 
-const nextPageClick = () => {
+const nextPageClick = (sparqlEndPoint: string, dataSetUri: string) => {
     const nextPage = currentPage + 1
-    renderPageResults(nextPage)
+    renderPageResults(sparqlEndPoint, dataSetUri, nextPage)
         .then(() => {
             currentPage = nextPage
             console.log(`Page ${nextPage} render complete`)
@@ -39,11 +44,11 @@ const nextPageClick = () => {
         .catch(console.error)
 }
 
-const renderPageResults = async (pageNumber: number) => {
+const renderPageResults = async (sparqlEndPoint: string, dataSetUri: string, pageNumber: number) => {
     console.log(`Fetching page ${pageNumber}`)
     const data = await getData(
         dataSetUri,
-        sparqlEndPointUri,
+        sparqlEndPoint,
         currentEndPointComponents,
         pageNumber
     )

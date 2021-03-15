@@ -215,10 +215,8 @@ export const getData = async (
                 {
                     SELECT ${nonQbMeasureDimensionVariableAliases.join(' ')}
                     WHERE {
-                        GRAPH ?dataSetGraph {
-                            BIND(<${dataSetUri}> as ?dataSet).
-                            ?dataSet a qb:DataSet.
-                        }
+                        BIND(<${dataSetUri}> as ?dataSet).
+                        ?dataSet a qb:DataSet.
                         
                         {
                             SELECT *
@@ -236,8 +234,9 @@ export const getData = async (
                                 .map(d => 
                                     `{ 
                                         # Account for possible duplicate lables.
-                                        #SELECT ?${d.getValueVariableAlias()} (GROUP_CONCAT(?${d.getValueLabelVariableAlias()}x; separator=",") as ?${d.getValueLabelVariableAlias()})
+                                        #SELECT ?${d.getValueVariableAlias()} (GROUP_CONCAT(?${d.getValueLabelVariableAlias()}inner; separator=",") as ?${d.getValueLabelVariableAlias()})
                                         SELECT ?${d.getValueVariableAlias()} (MIN(?${d.getValueLabelVariableAlias()}inner) as ?${d.getValueLabelVariableAlias()})
+                                        #SELECT ?${d.getValueVariableAlias()} (SAMPLE(?${d.getValueLabelVariableAlias()}inner) as ?${d.getValueLabelVariableAlias()})
                                         WHERE {
                                             ${d.valueGraphUris
                                                 .map(graphUri => `

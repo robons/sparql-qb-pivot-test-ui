@@ -1,8 +1,37 @@
 <html>
     <head>
         <script data-main="main" type="text/javascript"  src="https://cdnjs.cloudflare.com/ajax/libs/require.js/2.3.5/require.js"></script>
+        <style type="text/css">
+            body {
+                height: 100%;
+                display: flex;
+                flex-direction: column;
+                margin: 0;
+            }
+
+            body > * {
+                margin: 10px;
+            }
+
+            #tableContainer {
+                flex-grow: 1;
+                overflow: auto;
+            }
+        </style>
     </head>
     <body>
+        <div>
+            <label>
+                Dataset:
+                <select id="dataSet">
+                    <option value="http://gss-data.org.uk/data/gss_data/edvp/lccc-actual-ilr-income#dataset">Actual ILR Income</option>
+                    <option value="http://gss-data.org.uk/data/gss_data/energy/beis-sub-regional-feed-in-tariffs-confirmed-on-the-cfr-statistics#dataset">Sub-regional Feed-in Tariffs confirmed on the CFR statistics</option>
+                    <option value="http://gss-data.org.uk/data/gss_data/trade/ons-quarterly-country-and-regional-gdp#dataset">Quarterly country and regional GDP</option>
+                    <option value="http://gss-data.org.uk/data/gss_data/edvp/dft-electric-vehicle-charging-device-statistics-month-year-data-tables#dataset">Electric vehicle charging device statistics: January 2021</option>
+                    <option value="http://gss-data.org.uk/data/gss_data/trade/hmrc-regional-trade-statistics-interactive-analysis#dataset">HMRC Regional Trade Statistics</option>
+                </select>
+            </label>
+        </div>
         <div id="tableContainer"></div>
         <div>
             <span id="pageNumberDisplay"></span>
