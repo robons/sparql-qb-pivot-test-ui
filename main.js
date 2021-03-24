@@ -9,12 +9,17 @@ define(["require", "exports", "./query"], function (require, exports, query_1) {
     let currentPage;
     const sparqlEndPointUri = "https://staging.gss-data.org.uk/sparql";
     const main = async () => {
+        // Find out which multi-measure datasets we have available
+        const dataSets = await query_1.getMultiMeasureDataSets(sparqlEndPointUri);
+        dataSetSelection.innerHTML = dataSets
+            .map(ds => `<option value="${ds.uri}">${ds.label}</option>`)
+            .join("\n");
         dataSetSelection.onchange = (event) => {
             setDataSet(sparqlEndPointUri, dataSetSelection.value)
                 .then(() => console.log(`Set dataset URI to ${dataSetSelection.value}`))
                 .catch(console.error);
         };
-        await setDataSet(sparqlEndPointUri, dataSetSelection.value);
+        await setDataSet(sparqlEndPointUri, dataSets[0].uri);
     };
     const setDataSet = async (sparqlEndPoint, dataSetUri) => {
         currentPage = 1;

@@ -1,4 +1,4 @@
-import { DimensionValue, getData, getDataStructureDefinition, ObservedValue, Component } from "./query"
+import { DimensionValue, getData, getDataStructureDefinition, getMultiMeasureDataSets, ObservedValue, Component } from "./query"
 
 const tableContainer = window.document.getElementById("tableContainer");
 const nextButton = window.document.getElementById("nextButton");
@@ -11,13 +11,19 @@ let currentPage: number
 const sparqlEndPointUri = "https://staging.gss-data.org.uk/sparql"
 
 const main = async () => {  
+    // Find out which multi-measure datasets we have available
+    const dataSets = await getMultiMeasureDataSets(sparqlEndPointUri);
+    dataSetSelection.innerHTML = dataSets
+        .map(ds => `<option value="${ds.uri}">${ds.label}</option>`)
+        .join("\n")
+
     dataSetSelection.onchange = (event: Event) => {
         setDataSet(sparqlEndPointUri, dataSetSelection.value)
         .then(() => console.log(`Set dataset URI to ${dataSetSelection.value}`))
         .catch(console.error)
     }
 
-    await setDataSet(sparqlEndPointUri, dataSetSelection.value)
+    await setDataSet(sparqlEndPointUri, dataSets[0].uri)
 }
 
 const setDataSet = async (sparqlEndPoint: string, dataSetUri: string) => {

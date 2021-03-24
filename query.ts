@@ -354,6 +354,45 @@ export const getData = async (
     return new DataSet(columnsOut, attributeKeys, mappedResults)
 }
 
+export const getMultiMeasureDataSets = async (endPointUri: string): Promise<{uri: string, label: string}[]> => {
+    const dataSets = await query(endPointUri, `
+        PREFIX qb: <http://purl.org/linked-data/cube#>
+        PREFIX rdf: <http://www.w3.org/1999/02/22-rdf-syntax-ns#>
+        PREFIX dcat: <http://www.w3.org/ns/dcat#>
+        PREFIX rdfs: <http://www.w3.org/2000/01/rdf-schema#>
+        PREFIX pmdcat: <http://publishmydata.com/pmdcat#>
+        PREFIX foaf: <http://xmlns.com/foaf/0.1/>
+
+        SELECT ?ds ?label
+        WHERE {
+            {
+                SELECT ?ds
+                WHERE {
+                    ?ds 
+                        a qb:DataSet;
+                        qb:structure ?dsd.
+
+                    ?dsd qb:component/qb:measure ?measureType.
+                }
+                GROUP BY ?ds
+                HAVING (COUNT(DISTINCT ?measureType) > 1)
+            }
+
+            ?catalogRecord 
+                foaf:primaryTopic/pmdcat:datasetContents ?ds;
+                rdfs:label ?label.
+        }
+        ORDER BY ASC(?label) 
+    `)
+
+    return dataSets.map(ds => {
+        return {
+            uri: ds["ds"],
+            label: ds["label"]
+        }
+    })
+}
+
 interface ISparqlResponse {
     head: {
         vars: string[]
