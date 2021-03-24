@@ -31,7 +31,7 @@ define(["require", "exports", "./query"], function (require, exports, query_1) {
         await renderPageResults(sparqlEndPoint, dataSetUri, currentPage);
     };
     const pageChangeClick = (sparqlEndPoint, dataSetUri, pageToFetch) => {
-        pageToFetch = Math.max(0, pageToFetch);
+        pageToFetch = Math.max(1, pageToFetch);
         renderPageResults(sparqlEndPoint, dataSetUri, pageToFetch)
             .then(() => {
             currentPage = pageToFetch;

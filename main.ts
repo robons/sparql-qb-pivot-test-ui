@@ -43,7 +43,7 @@ const setDataSet = async (sparqlEndPoint: string, dataSetUri: string) => {
 }
 
 const pageChangeClick = (sparqlEndPoint: string, dataSetUri: string, pageToFetch: number) => {
-    pageToFetch = Math.max(0, pageToFetch);
+    pageToFetch = Math.max(1, pageToFetch);
     renderPageResults(sparqlEndPoint, dataSetUri, pageToFetch)
         .then(() => {
             currentPage = pageToFetch
