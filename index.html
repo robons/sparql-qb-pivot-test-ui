@@ -4,6 +4,7 @@
         <style type="text/css">
             body {
                 height: 100%;
+                width: 100%;
                 display: flex;
                 flex-direction: column;
                 margin: 0;
@@ -16,6 +17,24 @@
             #tableContainer {
                 flex-grow: 1;
                 overflow: auto;
+                width: 100%;
+            }
+
+            #tableContainer table {
+                min-width: 100%;
+                border: 1px solid black;
+                border-collapse: collapse;
+            }
+
+            #tableContainer table th {
+                border: 1px solid black;
+            }
+
+            #tableContainer table td {
+                border-left: 1px solid black;
+                border-right: 1px solid black;
+                border-top: 1px dashed black;
+                border-bottom: 1px dashed black;
             }
         </style>
     </head>
@@ -30,6 +49,7 @@
         </div>
         <div id="tableContainer"></div>
         <div>
+            <button id="previousButton">Previous</button>
             <span id="pageNumberDisplay"></span>
             <button id="nextButton">Next</button>
         </div>

@@ -2,6 +2,7 @@ import { DimensionValue, getData, getDataStructureDefinition, getMultiMeasureDat
 
 const tableContainer = window.document.getElementById("tableContainer");
 const nextButton = window.document.getElementById("nextButton");
+const previousButton = window.document.getElementById("previousButton");
 const currentPageNumberSpan = window.document.getElementById("pageNumberDisplay");
 const dataSetSelection = <HTMLFormElement>window.document.getElementById("dataSet");
 
@@ -35,17 +36,18 @@ const setDataSet = async (sparqlEndPoint: string, dataSetUri: string) => {
     
     console.log(currentEndPointComponents)
 
-    nextButton.onclick = () => nextPageClick(sparqlEndPoint, dataSetUri)
+    previousButton.onclick = () => pageChangeClick(sparqlEndPoint, dataSetUri, currentPage-1)
+    nextButton.onclick = () => pageChangeClick(sparqlEndPoint, dataSetUri, currentPage+1)
 
     await renderPageResults(sparqlEndPoint, dataSetUri, currentPage)
 }
 
-const nextPageClick = (sparqlEndPoint: string, dataSetUri: string) => {
-    const nextPage = currentPage + 1
-    renderPageResults(sparqlEndPoint, dataSetUri, nextPage)
+const pageChangeClick = (sparqlEndPoint: string, dataSetUri: string, pageToFetch: number) => {
+    pageToFetch = Math.max(0, pageToFetch);
+    renderPageResults(sparqlEndPoint, dataSetUri, pageToFetch)
         .then(() => {
-            currentPage = nextPage
-            console.log(`Page ${nextPage} render complete`)
+            currentPage = pageToFetch
+            console.log(`Page ${pageToFetch} render complete`)
         })
         .catch(console.error)
 }
@@ -66,9 +68,11 @@ const renderPageResults = async (sparqlEndPoint: string, dataSetUri: string, pag
         <table>
             <thead>
                 ${
-                    data.keys
+                    data.columns
                         .map(
-                            k => `<th>${k}</th>`
+                            c => `<th>
+                                <span title="${c.key}">${c.label}</span>
+                            </th>`
                         )
                         .join("\n")
                 }
@@ -81,8 +85,8 @@ const renderPageResults = async (sparqlEndPoint: string, dataSetUri: string, pag
                             record => `
                                 <tr>
                                 ${
-                                    data.keys
-                                        .map(k => `<td>${mapColumnValueToHtml(record[k])}</td>`)
+                                    data.columns
+                                        .map(c => `<td>${mapColumnValueToHtml(record[c.key])}</td>`)
                                         .join("\n")
                                 }
                                 </tr>

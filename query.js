@@ -4,7 +4,8 @@ define(["require", "exports"], function (require, exports) {
     exports.getMultiMeasureDataSets = exports.getData = exports.getDataStructureDefinition = exports.ObservedValue = exports.AttributeValue = exports.DimensionValue = exports.ComponentValue = exports.DataSet = exports.Measure = exports.Attribute = exports.Dimension = void 0;
     const notAlphanumericChar = /[^0-9A-Za-z]/g;
     class Dimension {
-        constructor(dimension, valueGraphUris) {
+        constructor(label, dimension, valueGraphUris) {
+            this.label = label;
             this.dimension = dimension;
             this.valueGraphUris = valueGraphUris;
             this.getValueVariableAlias = () => this.dimension.replaceAll(notAlphanumericChar, '');
@@ -22,7 +23,8 @@ define(["require", "exports"], function (require, exports) {
     }
     exports.Attribute = Attribute;
     class Measure {
-        constructor(measure) {
+        constructor(label, measure) {
+            this.label = label;
             this.measure = measure;
             this.getObsVariableAlias = () => `${this.variableAliasBase}Obs`;
             this.getValueVariableAlias = () => `${this.getObsVariableAlias()}Value`;
@@ -31,8 +33,8 @@ define(["require", "exports"], function (require, exports) {
     }
     exports.Measure = Measure;
     class DataSet {
-        constructor(keys, measureAttributeKeys, data) {
-            this.keys = keys;
+        constructor(columns, measureAttributeKeys, data) {
+            this.columns = columns;
             this.measureAttributeKeys = measureAttributeKeys;
             this.data = data;
         }
@@ -74,7 +76,7 @@ define(["require", "exports"], function (require, exports) {
         PREFIX rdfs: <http://www.w3.org/2000/01/rdf-schema#>
 
         # Get info on all of the dimensions in this dataset and find out which graphs the URIs are located in (to optimise later queries).
-        SELECT DISTINCT ?dimension ?labelGraphUri
+        SELECT DISTINCT ?dimension ?dimensionLabel ?labelGraphUri
         WHERE {
             {
                 SELECT DISTINCT ?dimension ?dimensionValue
@@ -93,6 +95,10 @@ define(["require", "exports"], function (require, exports) {
                             ?dimension ?dimensionValue.
                     }
                 }
+            }
+
+            OPTIONAL {
+                ?dimension rdfs:label ?dimensionLabel.
             }
 
             OPTIONAL {
@@ -134,8 +140,9 @@ define(["require", "exports"], function (require, exports) {
     `;
         const measuresQuery = `
         PREFIX qb: <http://purl.org/linked-data/cube#>
+        PREFIX rdfs: <http://www.w3.org/2000/01/rdf-schema#>
 
-        SELECT ?measure 
+        SELECT ?measure ?measureLabel
         WHERE {
             GRAPH ?dataSetGraph {
                 BIND (<${dataSetUri}> as ?dataSet).
@@ -143,6 +150,10 @@ define(["require", "exports"], function (require, exports) {
 
                 ?dataSet qb:structure/qb:component/qb:measure ?measure.
             }
+            OPTIONAL {
+                ?measure rdfs:label ?measureLabel.
+            }
+
             # Measure values are literals and should never be URIS.
         }
     `;
@@ -156,10 +167,11 @@ define(["require", "exports"], function (require, exports) {
         for (const component of results) {
             if ("dimension" in component) {
                 const dimensionUri = component["dimension"];
+                const dimensionLabel = component["dimensionLabel"];
                 const valueGraphUri = component["labelGraphUri"];
                 if (!(dimensionUri in mapDimensionToValueGraphUris)) {
                     const valueGraphUris = [];
-                    uniqueComponents.push(new Dimension(dimensionUri, valueGraphUris));
+                    uniqueComponents.push(new Dimension(dimensionLabel || dimensionUri, dimensionUri, valueGraphUris));
                     mapDimensionToValueGraphUris[dimensionUri] = valueGraphUris;
                 }
                 if (typeof valueGraphUri !== "undefined" && valueGraphUri !== null) {
@@ -179,7 +191,9 @@ define(["require", "exports"], function (require, exports) {
                 }
             }
             else if ("measure" in component) {
-                uniqueComponents.push(new Measure(component["measure"]));
+                const measureUri = component["measure"];
+                const measureLabel = component["measureLabel"];
+                uniqueComponents.push(new Measure(measureLabel || measureUri, measureUri));
             }
             else {
                 throw new Error(`Unmatched component: ${JSON.stringify(component)}`);
@@ -322,8 +336,18 @@ define(["require", "exports"], function (require, exports) {
             return resultOut;
         });
         const columnsOut = dimensionsNotQbMeasure
-            .map(d => (d.dimension))
-            .concat(measures.map(m => m.measure));
+            .map(d => {
+            return {
+                key: d.dimension,
+                label: d.label
+            };
+        })
+            .concat(measures.map(m => {
+            return {
+                key: m.measure,
+                label: m.label
+            };
+        }));
         const attributeKeys = attributes.map(a => a.attribute);
         return new DataSet(columnsOut, attributeKeys, mappedResults);
     };
@@ -352,8 +376,8 @@ define(["require", "exports"], function (require, exports) {
                 HAVING (COUNT(DISTINCT ?measureType) > 1)
             }
 
-            ?catalogRecord 
-                foaf:primaryTopic/pmdcat:datasetContents ?ds;
+            ?catalogEntry 
+                pmdcat:datasetContents ?ds;
                 rdfs:label ?label.
         }
         ORDER BY ASC(?label) 

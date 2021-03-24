@@ -1,7 +1,7 @@
 const notAlphanumericChar = /[^0-9A-Za-z]/g
 
 export class Dimension {
-    constructor(public dimension: string, public valueGraphUris: string[]) {}
+    constructor(public label: string, public dimension: string, public valueGraphUris: string[]) {}
 
     public getValueVariableAlias = () => this.dimension.replaceAll(notAlphanumericChar, '')
     public getValueLabelVariableAlias = () => `${this.getValueVariableAlias()}Label`
@@ -15,7 +15,7 @@ export class Attribute {
 
 export class Measure {
     public variableAliasBase: string
-    constructor(public measure: string) {
+    constructor(public label: string, public measure: string) {
         this.variableAliasBase = this.measure.replaceAll(notAlphanumericChar, '')
     }
     public getObsVariableAlias = () => `${this.variableAliasBase}Obs`
@@ -25,7 +25,7 @@ export class Measure {
 export type Component = Dimension | Attribute | Measure
 
 export class DataSet {
-    constructor(public keys: string[], public measureAttributeKeys: string[], public data: {[key: string]: ComponentValue | any}[]) {}
+    constructor(public columns: {key: string, label: string}[], public measureAttributeKeys: string[], public data: {[key: string]: ComponentValue | any}[]) {}
 }
 
 export abstract class ComponentValue<T= any> {
@@ -60,7 +60,7 @@ export const getDataStructureDefinition = async (dataSetUri: string, endPointUri
         PREFIX rdfs: <http://www.w3.org/2000/01/rdf-schema#>
 
         # Get info on all of the dimensions in this dataset and find out which graphs the URIs are located in (to optimise later queries).
-        SELECT DISTINCT ?dimension ?labelGraphUri
+        SELECT DISTINCT ?dimension ?dimensionLabel ?labelGraphUri
         WHERE {
             {
                 SELECT DISTINCT ?dimension ?dimensionValue
@@ -79,6 +79,10 @@ export const getDataStructureDefinition = async (dataSetUri: string, endPointUri
                             ?dimension ?dimensionValue.
                     }
                 }
+            }
+
+            OPTIONAL {
+                ?dimension rdfs:label ?dimensionLabel.
             }
 
             OPTIONAL {
@@ -122,8 +126,9 @@ export const getDataStructureDefinition = async (dataSetUri: string, endPointUri
 
     const measuresQuery = `
         PREFIX qb: <http://purl.org/linked-data/cube#>
+        PREFIX rdfs: <http://www.w3.org/2000/01/rdf-schema#>
 
-        SELECT ?measure 
+        SELECT ?measure ?measureLabel
         WHERE {
             GRAPH ?dataSetGraph {
                 BIND (<${dataSetUri}> as ?dataSet).
@@ -131,6 +136,10 @@ export const getDataStructureDefinition = async (dataSetUri: string, endPointUri
 
                 ?dataSet qb:structure/qb:component/qb:measure ?measure.
             }
+            OPTIONAL {
+                ?measure rdfs:label ?measureLabel.
+            }
+
             # Measure values are literals and should never be URIS.
         }
     `
@@ -149,10 +158,11 @@ export const getDataStructureDefinition = async (dataSetUri: string, endPointUri
     for(const component of results) {
         if ("dimension" in component) {
             const dimensionUri = component["dimension"];
+            const dimensionLabel = component["dimensionLabel"];
             const valueGraphUri = component["labelGraphUri"]
             if (!(dimensionUri in mapDimensionToValueGraphUris)){
                 const valueGraphUris = []
-                uniqueComponents.push(new Dimension(dimensionUri, valueGraphUris))
+                uniqueComponents.push(new Dimension(dimensionLabel || dimensionUri, dimensionUri, valueGraphUris))
                 mapDimensionToValueGraphUris[dimensionUri] = valueGraphUris
             }
             if (typeof valueGraphUri !== "undefined" && valueGraphUri !== null) {
@@ -171,7 +181,9 @@ export const getDataStructureDefinition = async (dataSetUri: string, endPointUri
                 mapAttributeToValueGraphUris[attributeUri].push(valueGraphUri)
             }
         } else if ("measure" in component) {
-            uniqueComponents.push(new Measure(component["measure"]))
+            const measureUri = component["measure"]
+            const measureLabel = component["measureLabel"]
+            uniqueComponents.push(new Measure(measureLabel || measureUri, measureUri))
         } else {
             throw new Error(`Unmatched component: ${JSON.stringify(component)}`)
         }
@@ -346,8 +358,18 @@ export const getData = async (
 
     const columnsOut = 
         dimensionsNotQbMeasure
-            .map(d => (d.dimension))
-            .concat(measures.map(m => m.measure))
+            .map(d => {
+                return {
+                    key: d.dimension,
+                    label: d.label
+                }
+            })
+            .concat(measures.map(m => {
+                return {
+                    key: m.measure,
+                    label: m.label
+                }
+            }))
 
     const attributeKeys = attributes.map(a => a.attribute)
 
@@ -378,8 +400,8 @@ export const getMultiMeasureDataSets = async (endPointUri: string): Promise<{uri
                 HAVING (COUNT(DISTINCT ?measureType) > 1)
             }
 
-            ?catalogRecord 
-                foaf:primaryTopic/pmdcat:datasetContents ?ds;
+            ?catalogEntry 
+                pmdcat:datasetContents ?ds;
                 rdfs:label ?label.
         }
         ORDER BY ASC(?label) 

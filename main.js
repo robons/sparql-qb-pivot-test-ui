@@ -3,6 +3,7 @@ define(["require", "exports", "./query"], function (require, exports, query_1) {
     Object.defineProperty(exports, "__esModule", { value: true });
     const tableContainer = window.document.getElementById("tableContainer");
     const nextButton = window.document.getElementById("nextButton");
+    const previousButton = window.document.getElementById("previousButton");
     const currentPageNumberSpan = window.document.getElementById("pageNumberDisplay");
     const dataSetSelection = window.document.getElementById("dataSet");
     let currentEndPointComponents;
@@ -25,15 +26,16 @@ define(["require", "exports", "./query"], function (require, exports, query_1) {
         currentPage = 1;
         currentEndPointComponents = await query_1.getDataStructureDefinition(dataSetUri, sparqlEndPoint);
         console.log(currentEndPointComponents);
-        nextButton.onclick = () => nextPageClick(sparqlEndPoint, dataSetUri);
+        previousButton.onclick = () => pageChangeClick(sparqlEndPoint, dataSetUri, currentPage - 1);
+        nextButton.onclick = () => pageChangeClick(sparqlEndPoint, dataSetUri, currentPage + 1);
         await renderPageResults(sparqlEndPoint, dataSetUri, currentPage);
     };
-    const nextPageClick = (sparqlEndPoint, dataSetUri) => {
-        const nextPage = currentPage + 1;
-        renderPageResults(sparqlEndPoint, dataSetUri, nextPage)
+    const pageChangeClick = (sparqlEndPoint, dataSetUri, pageToFetch) => {
+        pageToFetch = Math.max(0, pageToFetch);
+        renderPageResults(sparqlEndPoint, dataSetUri, pageToFetch)
             .then(() => {
-            currentPage = nextPage;
-            console.log(`Page ${nextPage} render complete`);
+            currentPage = pageToFetch;
+            console.log(`Page ${pageToFetch} render complete`);
         })
             .catch(console.error);
     };
@@ -46,8 +48,10 @@ define(["require", "exports", "./query"], function (require, exports, query_1) {
         tableContainer.innerHTML = `
         <table>
             <thead>
-                ${data.keys
-            .map(k => `<th>${k}</th>`)
+                ${data.columns
+            .map(c => `<th>
+                                <span title="${c.key}">${c.label}</span>
+                            </th>`)
             .join("\n")}
             </thead>
 
@@ -55,8 +59,8 @@ define(["require", "exports", "./query"], function (require, exports, query_1) {
                 ${data.data
             .map(record => `
                                 <tr>
-                                ${data.keys
-            .map(k => `<td>${mapColumnValueToHtml(record[k])}</td>`)
+                                ${data.columns
+            .map(c => `<td>${mapColumnValueToHtml(record[c.key])}</td>`)
             .join("\n")}
                                 </tr>
                             `)
