@@ -108,8 +108,8 @@ export const getDataStructureDefinition = async (dataSetUri: string, endPointUri
                         ?dataSet 
                             a qb:DataSet;
                             qb:structure/qb:component/qb:attribute ?attribute.
-                    }
-                    GRAPH ?dataSetGraph {
+                    # }
+                    # GRAPH ?dataSetGraph {
                         ?obs
                             a qb:Observation; 
                             qb:dataSet ?dataSet;
