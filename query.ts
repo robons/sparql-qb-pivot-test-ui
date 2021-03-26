@@ -230,16 +230,6 @@ export const getData = async (
                         BIND(<${dataSetUri}> as ?dataSet).
                         ?dataSet a qb:DataSet.
                         
-                        {
-                            SELECT *
-                            WHERE {
-                                []
-                                    a qb:Observation;
-                                    qb:dataSet ?dataSet;
-                                    ${nonQbMeasureDimensionUrisWithVariables}.
-                            }
-                        }
-
                         # Find the label for each dimension value by searching the graphs we know labels are found in.
                         ${
                             dimensionsNotQbMeasure
@@ -250,11 +240,18 @@ export const getData = async (
                                         SELECT ?${d.getValueVariableAlias()} (MIN(?${d.getValueLabelVariableAlias()}inner) as ?${d.getValueLabelVariableAlias()})
                                         #SELECT ?${d.getValueVariableAlias()} (SAMPLE(?${d.getValueLabelVariableAlias()}inner) as ?${d.getValueLabelVariableAlias()})
                                         WHERE {
+                                            {
+                                                SELECT DISTINCT ?${d.getValueVariableAlias()}
+                                                WHERE {
+                                                    [] <${d.dimension}> ?${d.getValueVariableAlias()}.
+                                                }
+                                            }
+
                                             ${d.valueGraphUris
                                                 .map(graphUri => `
                                                 {
                                                     GRAPH <${graphUri}> {
-                                                        ?${d.getValueVariableAlias()} rdfs:label ?${d.getValueLabelVariableAlias()}inner.
+                                                            ?${d.getValueVariableAlias()} rdfs:label ?${d.getValueLabelVariableAlias()}inner.
                                                     }
                                                 }
                                                 `)
@@ -265,6 +262,16 @@ export const getData = async (
                                     }`
                                 )
                                 .join("\n")
+                        }
+
+                        {
+                            SELECT *
+                            WHERE {
+                                []
+                                    a qb:Observation;
+                                    qb:dataSet ?dataSet;
+                                    ${nonQbMeasureDimensionUrisWithVariables}.
+                            }
                         }
                     }
                     GROUP BY ${nonQbMeasureDimensionVariableAliases.join(' ')}

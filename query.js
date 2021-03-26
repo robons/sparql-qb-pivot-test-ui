@@ -228,6 +228,35 @@ define(["require", "exports"], function (require, exports) {
                         BIND(<${dataSetUri}> as ?dataSet).
                         ?dataSet a qb:DataSet.
                         
+                        # Find the label for each dimension value by searching the graphs we know labels are found in.
+                        ${dimensionsNotQbMeasure
+            .map(d => `{ 
+                                        # Account for possible duplicate lables.
+                                        #SELECT ?${d.getValueVariableAlias()} (GROUP_CONCAT(?${d.getValueLabelVariableAlias()}inner; separator=",") as ?${d.getValueLabelVariableAlias()})
+                                        SELECT ?${d.getValueVariableAlias()} (MIN(?${d.getValueLabelVariableAlias()}inner) as ?${d.getValueLabelVariableAlias()})
+                                        #SELECT ?${d.getValueVariableAlias()} (SAMPLE(?${d.getValueLabelVariableAlias()}inner) as ?${d.getValueLabelVariableAlias()})
+                                        WHERE {
+                                            {
+                                                SELECT DISTINCT ?${d.getValueVariableAlias()}
+                                                WHERE {
+                                                    [] <${d.dimension}> ?${d.getValueVariableAlias()}.
+                                                }
+                                            }
+
+                                            ${d.valueGraphUris
+            .map(graphUri => `
+                                                {
+                                                    GRAPH <${graphUri}> {
+                                                            ?${d.getValueVariableAlias()} rdfs:label ?${d.getValueLabelVariableAlias()}inner.
+                                                    }
+                                                }
+                                                `)
+            .join(" UNION\n")}
+                                        }
+                                        GROUP BY ?${d.getValueVariableAlias()}
+                                    }`)
+            .join("\n")}
+
                         {
                             SELECT *
                             WHERE {
@@ -237,28 +266,6 @@ define(["require", "exports"], function (require, exports) {
                                     ${nonQbMeasureDimensionUrisWithVariables}.
                             }
                         }
-
-                        # Find the label for each dimension value by searching the graphs we know labels are found in.
-                        ${dimensionsNotQbMeasure
-            .map(d => `{ 
-                                        # Account for possible duplicate lables.
-                                        #SELECT ?${d.getValueVariableAlias()} (GROUP_CONCAT(?${d.getValueLabelVariableAlias()}inner; separator=",") as ?${d.getValueLabelVariableAlias()})
-                                        SELECT ?${d.getValueVariableAlias()} (MIN(?${d.getValueLabelVariableAlias()}inner) as ?${d.getValueLabelVariableAlias()})
-                                        #SELECT ?${d.getValueVariableAlias()} (SAMPLE(?${d.getValueLabelVariableAlias()}inner) as ?${d.getValueLabelVariableAlias()})
-                                        WHERE {
-                                            ${d.valueGraphUris
-            .map(graphUri => `
-                                                {
-                                                    GRAPH <${graphUri}> {
-                                                        ?${d.getValueVariableAlias()} rdfs:label ?${d.getValueLabelVariableAlias()}inner.
-                                                    }
-                                                }
-                                                `)
-            .join(" UNION\n")}
-                                        }
-                                        GROUP BY ?${d.getValueVariableAlias()}
-                                    }`)
-            .join("\n")}
                     }
                     GROUP BY ${nonQbMeasureDimensionVariableAliases.join(' ')}
                     # Ordering and paging here.
