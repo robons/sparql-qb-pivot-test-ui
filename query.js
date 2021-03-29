@@ -81,18 +81,18 @@ define(["require", "exports"], function (require, exports) {
             {
                 SELECT DISTINCT ?dimension ?dimensionValue
                 WHERE {
-                    BIND(<${dataSetUri}> as ?dataSet)
                     GRAPH ?dataSetGraph {
+                        {
+                            SELECT DISTINCT ?dataSet ?dimension
+                            WHERE {
+                                BIND(<${dataSetUri}> as ?dataSet)
+                                ?dataSet 
+                                    a qb:DataSet;
+                                    qb:structure/qb:component/qb:dimension ?dimension.
+                            }
+                        }
 
-                        ?dataSet 
-                            a qb:DataSet;
-                            qb:structure/qb:component/qb:dimension ?dimension.
-                    }
-                    GRAPH ?dataSetGraph {
-                        ?obs
-                            a qb:Observation; 
-                            qb:dataSet ?dataSet;
-                            ?dimension ?dimensionValue.
+                        [] ?dimension ?dimensionValue.
                     }
                 }
             }
@@ -117,18 +117,19 @@ define(["require", "exports"], function (require, exports) {
             {
                 SELECT DISTINCT ?attribute ?attributeValue
                 WHERE {
-                    BIND(<${dataSetUri}> as ?dataSet)
+                    {
+                        SELECT DISTINCT ?dataSetGraph ?dataSet ?attribute 
+                        WHERE {
+                            GRAPH ?dataSetGraph {
+                                BIND(<${dataSetUri}> as ?dataSet)
+                                ?dataSet 
+                                    a qb:DataSet;
+                                    qb:structure/qb:component/qb:attribute ?attribute.
+                            }
+                        }
+                    }
                     GRAPH ?dataSetGraph {
-
-                        ?dataSet 
-                            a qb:DataSet;
-                            qb:structure/qb:component/qb:attribute ?attribute.
-                    # }
-                    # GRAPH ?dataSetGraph {
-                        ?obs
-                            a qb:Observation; 
-                            qb:dataSet ?dataSet;
-                            ?attribute ?attributeValue.
+                        [] ?attribute ?attributeValue.
                     }
                 }
             }
