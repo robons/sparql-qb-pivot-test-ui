@@ -453,6 +453,10 @@ const query = async <T>(endPointUri: string, query: string): Promise<T[]> => {
         mode: "cors"
     })
 
+    if (response.status == 503){
+        throw new Error("SPARQL Query timeout.")
+    }
+
     const responseObject = <ISparqlResponse>await response.json();
 
     return responseObject.results.bindings.map(result => {

@@ -11,6 +11,20 @@ let currentPage: number
 
 const sparqlEndPointUri = "https://staging.gss-data.org.uk/sparql"
 
+const handleError = (err: Error) => {
+    tableContainer.innerHTML = `
+        <h1>Error</h1>
+        <pre>
+            ${err.name}
+
+            ${err.message}
+
+            ${err.stack}
+        </pre>
+    `
+    console.error(err);
+}
+
 const main = async () => {  
     // Find out which multi-measure datasets we have available
     const dataSets = await getMultiMeasureDataSets(sparqlEndPointUri);
@@ -21,7 +35,7 @@ const main = async () => {
     dataSetSelection.onchange = (event: Event) => {
         setDataSet(sparqlEndPointUri, dataSetSelection.value)
         .then(() => console.log(`Set dataset URI to ${dataSetSelection.value}`))
-        .catch(console.error)
+        .catch(handleError)
     }
 
     await setDataSet(sparqlEndPointUri, dataSets[0].uri)
@@ -49,11 +63,14 @@ const pageChangeClick = (sparqlEndPoint: string, dataSetUri: string, pageToFetch
             currentPage = pageToFetch
             console.log(`Page ${pageToFetch} render complete`)
         })
-        .catch(console.error)
+        .catch(handleError)
 }
 
 const renderPageResults = async (sparqlEndPoint: string, dataSetUri: string, pageNumber: number) => {
     console.log(`Fetching page ${pageNumber}`)
+
+    tableContainer.innerHTML = `Loading...`
+
     const data = await getData(
         dataSetUri,
         sparqlEndPoint,
@@ -107,9 +124,11 @@ const mapColumnValueToHtml = (columnValue: ObservedValue | any): string => {
         return `
             <span class="measured-value" title="${columnValue.uri}">
                 ${columnValue.value}
-                <span class="unit" title="${unitAttribute.uri}">
-                    ${unitAttribute.value}
-                </span>
+                ${
+                    unitAttribute 
+                        ? `<span class="unit" title="${unitAttribute.uri}">${unitAttribute.value}</span>`
+                        : `<span class="unit"><strong>NO UNIT FOUND</strong></span>`
+                }
             </span>
         `
     } else if (columnValue instanceof DimensionValue) {
@@ -127,5 +146,5 @@ const mapColumnValueToHtml = (columnValue: ObservedValue | any): string => {
 
 main()
     .then(() => console.log("FINISHED"))
-    .catch(console.error);
+    .catch(handleError);
 

@@ -411,6 +411,9 @@ define(["require", "exports"], function (require, exports) {
             body: formData,
             mode: "cors"
         });
+        if (response.status == 503) {
+            throw new Error("SPARQL Query timeout.");
+        }
         const responseObject = await response.json();
         return responseObject.results.bindings.map(result => {
             const resultOut = {};

@@ -9,6 +9,19 @@ define(["require", "exports", "./query"], function (require, exports, query_1) {
     let currentEndPointComponents;
     let currentPage;
     const sparqlEndPointUri = "https://staging.gss-data.org.uk/sparql";
+    const handleError = (err) => {
+        tableContainer.innerHTML = `
+        <h1>Error</h1>
+        <pre>
+            ${err.name}
+
+            ${err.message}
+
+            ${err.stack}
+        </pre>
+    `;
+        console.error(err);
+    };
     const main = async () => {
         // Find out which multi-measure datasets we have available
         const dataSets = await query_1.getMultiMeasureDataSets(sparqlEndPointUri);
@@ -18,7 +31,7 @@ define(["require", "exports", "./query"], function (require, exports, query_1) {
         dataSetSelection.onchange = (event) => {
             setDataSet(sparqlEndPointUri, dataSetSelection.value)
                 .then(() => console.log(`Set dataset URI to ${dataSetSelection.value}`))
-                .catch(console.error);
+                .catch(handleError);
         };
         await setDataSet(sparqlEndPointUri, dataSets[0].uri);
     };
@@ -37,10 +50,11 @@ define(["require", "exports", "./query"], function (require, exports, query_1) {
             currentPage = pageToFetch;
             console.log(`Page ${pageToFetch} render complete`);
         })
-            .catch(console.error);
+            .catch(handleError);
     };
     const renderPageResults = async (sparqlEndPoint, dataSetUri, pageNumber) => {
         console.log(`Fetching page ${pageNumber}`);
+        tableContainer.innerHTML = `Loading...`;
         const data = await query_1.getData(dataSetUri, sparqlEndPoint, currentEndPointComponents, pageNumber);
         console.log(data);
         // Clean out table container if there's anything in there.
@@ -76,9 +90,9 @@ define(["require", "exports", "./query"], function (require, exports, query_1) {
             return `
             <span class="measured-value" title="${columnValue.uri}">
                 ${columnValue.value}
-                <span class="unit" title="${unitAttribute.uri}">
-                    ${unitAttribute.value}
-                </span>
+                ${unitAttribute
+                ? `<span class="unit" title="${unitAttribute.uri}">${unitAttribute.value}</span>`
+                : `<span class="unit"><strong>NO UNIT FOUND</strong></span>`}
             </span>
         `;
         }
@@ -96,5 +110,5 @@ define(["require", "exports", "./query"], function (require, exports, query_1) {
     };
     main()
         .then(() => console.log("FINISHED"))
-        .catch(console.error);
+        .catch(handleError);
 });
